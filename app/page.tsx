@@ -1,101 +1,303 @@
+"use client";
+import { ChangeEvent, useState } from "react";
+import { Upload } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import Papa from "papaparse";
+import MediaViewer from "@/components/media-viewer";
 import Image from "next/image";
+import Link from "next/link";
+
+interface ValidationErrors {
+  file?: string;
+  urlColumn?: string;
+}
+
+interface CSVRow {
+  [key: string]: string | number;
+}
+
+interface ParsedCSVData {
+  data: string[][];
+  errors: Papa.ParseError[];
+  meta: Papa.ParseMeta;
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [file, setFile] = useState<File | null>(null);
+  const [data, setData] = useState<CSVRow[]>([]);
+  const [urlColumn, setUrlColumn] = useState<string>("");
+  const [selectedRow, setSelectedRow] = useState<CSVRow | null>(null);
+  const [columns, setColumns] = useState<string[]>([]);
+  const [error, setError] = useState<string>("");
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
+  const [fileName, setFileName] = useState<string>("");
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+  const validateForm = (): boolean => {
+    const errors: ValidationErrors = {};
+
+    if (!file) {
+      errors.file = "Please upload a CSV file";
+    }
+
+    if (!urlColumn.trim()) {
+      errors.urlColumn = "Please enter the URL column name";
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleFileSelect = (event: ChangeEvent<HTMLInputElement>): void => {
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      setFileName(selectedFile.name);
+      setValidationErrors((prev) => ({ ...prev, file: undefined }));
+      // Reset data when new file is selected
+      setData([]);
+      setColumns([]);
+      setSelectedRow(null);
+    }
+  };
+
+  const handleUrlColumnChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    setUrlColumn(e.target.value);
+    setValidationErrors((prev) => ({ ...prev, urlColumn: undefined }));
+  };
+
+  const processCSV = (): void => {
+    if (!file) return;
+
+    setError("");
+    setIsProcessing(true);
+
+    if (!file) {
+      setError("No file selected");
+      setIsProcessing(false);
+      return;
+    }
+    //@ts-ignore
+    Papa.parse(file, {
+      complete: (results: ParsedCSVData) => {
+        if (results.data && results.data.length > 0) {
+          const headers = results.data[0];
+
+          // Validate if the specified URL column exists
+          if (!headers.includes(urlColumn)) {
+            setError(
+              `Column "${urlColumn}" not found in CSV file. Available columns: ${headers.join(
+                ", "
+              )}`
+            );
+            setIsProcessing(false);
+            return;
+          }
+
+          setColumns(headers);
+          const parsedData = results.data
+            .slice(1)
+            .filter((row) => row.some((cell) => cell))
+            .map((row) => {
+              return headers.reduce<CSVRow>((obj, header, index) => {
+                obj[header] = row[index];
+                return obj;
+              }, {});
+            });
+
+          setData(parsedData);
+        } else {
+          setError("No data found in CSV file");
+        }
+        setIsProcessing(false);
+      },
+      error: (error: Papa.ParseError) => {
+        setError(`Error parsing CSV: ${error.message}`);
+        setIsProcessing(false);
+      },
+      header: false,
+      skipEmptyLines: true,
+      dynamicTyping: true,
+    });
+  };
+
+  const handleSubmit = (e: React.MouseEvent<HTMLButtonElement>): void => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    processCSV();
+  };
+
+  const handleRowClick = (row: CSVRow): void => {
+    setSelectedRow(row);
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto p-2 pt-6 space-y-2 flex justify-center items-center flex-col">
+      {/* Form Section */}
+      <Card className="w-96">
+        <CardHeader className="items-center">
+          <CardTitle>CSV Media Viewer</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="file-upload">Upload CSV File</Label>
+              <div className="mt-2">
+                <div className="gap-4">
+                  <Button
+                    type="button"
+                    className="relative"
+                    variant="outline"
+                    onClick={() =>
+                      document.getElementById("file-upload")?.click()
+                    }
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Choose File
+                  </Button>
+                  <Input
+                    id="file-upload"
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  {fileName && (
+                    <span className="text-sm text-gray-500">{fileName}</span>
+                  )}
+                </div>
+                {validationErrors.file && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {validationErrors.file}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="url-column">URL Column Name</Label>
+              <Input
+                id="url-column"
+                type="text"
+                value={urlColumn}
+                onChange={handleUrlColumnChange}
+                placeholder="Enter the column name containing URLs"
+                className="mt-1"
+              />
+              {validationErrors.urlColumn && (
+                <p className="text-red-500 text-sm mt-1">
+                  {validationErrors.urlColumn}
+                </p>
+              )}
+            </div>
+
+            {error && <div className="text-red-500 text-sm">{error}</div>}
+
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isProcessing}
+              className="w-full"
+            >
+              {isProcessing ? "Processing..." : "Process CSV"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Data Display Section */}
+      {data.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="overflow-x-auto overflow-y-auto max-h-96">
+              <table className="w-full text-center">
+                <thead>
+                  <tr>
+                    {columns.map((column) => (
+                      <th key={column} className="p-2 border-b">
+                        {column}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.map((row, index) => (
+                    <tr
+                      key={index}
+                      onClick={() => handleRowClick(row)}
+                      className="hover:bg-gray-100 cursor-pointer"
+                    >
+                      {columns.map((column) => (
+                        <td
+                          key={column}
+                          className="p-2 border-b truncate max-w-xs"
+                        >
+                          {row[column]}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Selected Row Details */}
+      {selectedRow && urlColumn && (
+        <Card className="w-5/6">
+          <CardHeader className="items-center">
+            <CardTitle>Media Preview</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Media Preview */}
+              <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden flex flex-col items-center w-full relative">
+                {selectedRow[urlColumn] ? (
+                  <MediaViewer mediaUrl={String(selectedRow[urlColumn])} />
+                ) : (
+                  <Image
+                    src="./no-image.svg"
+                    alt="no image"
+                    fill
+                    className="object-contain"
+                  />
+                )}
+              </div>
+
+              {/* Row Details */}
+              <div className="grid grid-cols-2 gap-4">
+                {Object.entries(selectedRow)
+                  // .filter(([key]) => key !== urlColumn)
+                  .map(([key, value]) => (
+                    <div key={key} className="space-y-1">
+                      <Label>{key}</Label>
+                      <div className="p-2 bg-gray-50 rounded truncate">
+                        {key === urlColumn ? (
+                          <Link href={String(value)} target="_blank">
+                            {value}
+                          </Link>
+                        ) : (
+                          value
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
