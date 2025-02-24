@@ -1,5 +1,5 @@
 "use client";
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Upload } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -140,6 +140,30 @@ export default function Home() {
     setSelectedRow(row);
   };
 
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!selectedRow) return;
+      if (event.key === "ArrowLeft") {
+        const currentIndex = data.indexOf(selectedRow);
+        if (currentIndex > 0) {
+          setSelectedRow(data[currentIndex - 1]);
+        }
+      } else if (event.key === "ArrowRight") {
+        const currentIndex = data.indexOf(selectedRow);
+        if (currentIndex < data.length - 1) {
+          setSelectedRow(data[currentIndex + 1]);
+        }
+      }
+    };
+  
+    document.addEventListener("keydown", handleKeyDown);
+  
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [data, selectedRow]);
+
   return (
     <div className="max-w-6xl mx-auto p-2 pt-6 space-y-2 flex justify-center items-center flex-col">
       {/* Form Section */}
@@ -264,7 +288,7 @@ export default function Home() {
               }
             }}
             disabled={data.indexOf(selectedRow) === 0}
-            className="mr-4 p-2"
+            className="mr-4 p-2"            
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
@@ -316,7 +340,7 @@ export default function Home() {
               }
             }}
             disabled={data.indexOf(selectedRow) === data.length - 1}
-            className="ml-4 p-2"
+            className="ml-4 p-2"            
           >
             <ChevronRight className="w-4 h-4" />
           </Button>
