@@ -1,6 +1,6 @@
 "use client";
 import { ChangeEvent, useState } from "react";
-import { Upload } from "lucide-react";
+import { ChevronLeft, ChevronRight, Upload } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -255,31 +255,42 @@ export default function Home() {
 
       {/* Selected Row Details */}
       {selectedRow && urlColumn && (
-        <Card className="w-5/6">
-          <CardHeader className="items-center">
-            <CardTitle>Media Preview</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {/* Media Preview */}
-              <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden flex flex-col items-center w-full relative">
-                {selectedRow[urlColumn] ? (
-                  <MediaViewer mediaUrl={String(selectedRow[urlColumn])} />
-                ) : (
-                  <Image
-                    src="./no-image.svg"
-                    alt="no image"
-                    fill
-                    className="object-contain"
-                  />
-                )}
-              </div>
+        <div className="flex items-center w-5/6">
+          <Button
+            onClick={() => {
+              const currentIndex = data.indexOf(selectedRow);
+              if (currentIndex > 0) {
+                setSelectedRow(data[currentIndex - 1]);
+              }
+            }}
+            disabled={data.indexOf(selectedRow) === 0}
+            className="mr-4 p-2"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <Card className="flex-1">
+            <CardHeader className="items-center">
+              <CardTitle>Media Preview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Media Preview */}
+                <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden flex flex-col items-center w-full relative">
+                  {selectedRow[urlColumn] ? (
+                    <MediaViewer mediaUrl={String(selectedRow[urlColumn])} />
+                  ) : (
+                    <Image
+                      src="./no-image.svg"
+                      alt="no image"
+                      fill
+                      className="object-contain"
+                    />
+                  )}
+                </div>
 
-              {/* Row Details */}
-              <div className="grid grid-cols-2 gap-4">
-                {Object.entries(selectedRow)
-                  // .filter(([key]) => key !== urlColumn)
-                  .map(([key, value]) => (
+                {/* Row Details */}
+                <div className="grid grid-cols-2 gap-4">
+                  {Object.entries(selectedRow).map(([key, value]) => (
                     <div key={key} className="space-y-1">
                       <Label>{key}</Label>
                       <div className="p-2 bg-gray-50 rounded truncate">
@@ -293,10 +304,23 @@ export default function Home() {
                       </div>
                     </div>
                   ))}
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+          <Button
+            onClick={() => {
+              const currentIndex = data.indexOf(selectedRow);
+              if (currentIndex < data.length - 1) {
+                setSelectedRow(data[currentIndex + 1]);
+              }
+            }}
+            disabled={data.indexOf(selectedRow) === data.length - 1}
+            className="ml-4 p-2"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
       )}
     </div>
   );
