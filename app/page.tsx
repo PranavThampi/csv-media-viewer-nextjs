@@ -155,10 +155,21 @@ export default function Home() {
           setSelectedRow(data[currentIndex + 1]);
         }
       }
+      if (event.key === " ") {
+        event.preventDefault();
+        const videoElement = document.querySelector("video");
+        if (videoElement) {
+          if (videoElement.paused) {
+            videoElement.play();
+          } else {
+            videoElement.pause();
+          }
+        }
+      }
     };
-  
+
     document.addEventListener("keydown", handleKeyDown);
-  
+
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
@@ -288,7 +299,7 @@ export default function Home() {
               }
             }}
             disabled={data.indexOf(selectedRow) === 0}
-            className="mr-4 p-2"            
+            className="mr-4 p-2"
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
@@ -340,7 +351,7 @@ export default function Home() {
               }
             }}
             disabled={data.indexOf(selectedRow) === data.length - 1}
-            className="ml-4 p-2"            
+            className="ml-4 p-2"
           >
             <ChevronRight className="w-4 h-4" />
           </Button>

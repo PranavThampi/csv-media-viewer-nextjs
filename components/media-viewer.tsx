@@ -68,7 +68,7 @@ const MediaViewer: React.FC<{ mediaUrl: string }> = ({ mediaUrl }) => {
           className="object-contain"
         />
       ) : (
-        <video controls style={{ maxWidth: "100%" }}>
+        <video controls style={{ maxWidth: "100%" }} autoPlay>
           <source src={mediaUrl} type="video/mp4" />
           Your browser does not support the video tag.
         </video>
