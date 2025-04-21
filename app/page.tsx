@@ -9,6 +9,7 @@ import Papa from "papaparse";
 import MediaViewer from "@/components/media-viewer";
 import Image from "next/image";
 import Link from "next/link";
+import { cn, isValidURL } from "@/lib/utils";
 
 interface ValidationErrors {
   file?: string;
@@ -252,7 +253,7 @@ export default function Home() {
       {/* Data Display Section */}
       {data.length > 0 && (
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-4 max-w-6xl">
             <div className="overflow-x-auto overflow-y-auto max-h-96">
               <table className="w-full text-center">
                 <thead>
@@ -328,8 +329,16 @@ export default function Home() {
                   {Object.entries(selectedRow).map(([key, value]) => (
                     <div key={key} className="space-y-1">
                       <Label>{key}</Label>
-                      <div className="p-2 bg-gray-50 rounded truncate">
+                      <div
+                        className={`p-2 bg-gray-50 rounded max-w-auto ${
+                          isValidURL(String(value)) ? "truncate" : "break-all"
+                        }`}
+                      >
                         {key === urlColumn ? (
+                          <Link href={String(value)} target="_blank">
+                            {value}
+                          </Link>
+                        ) : isValidURL(String(value)) ? (
                           <Link href={String(value)} target="_blank">
                             {value}
                           </Link>
