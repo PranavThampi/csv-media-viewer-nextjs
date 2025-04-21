@@ -9,7 +9,7 @@ import Papa from "papaparse";
 import MediaViewer from "@/components/media-viewer";
 import Image from "next/image";
 import Link from "next/link";
-import { cn, isValidURL } from "@/lib/utils";
+import { isValidURL } from "@/lib/utils";
 
 interface ValidationErrors {
   file?: string;
