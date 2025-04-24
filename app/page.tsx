@@ -9,11 +9,19 @@ import Papa from "papaparse";
 import MediaViewer from "@/components/media-viewer";
 import Image from "next/image";
 import Link from "next/link";
-import { isValidURL } from "@/lib/utils";
+import { isValidURL, mediaTypeValues } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ValidationErrors {
   file?: string;
   urlColumn?: string;
+  mediaType?: string;
 }
 
 interface CSVRow {
@@ -30,6 +38,7 @@ export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [data, setData] = useState<CSVRow[]>([]);
   const [urlColumn, setUrlColumn] = useState<string>("");
+  const [mediaType, setMediaType] = useState<mediaTypeValues>(null);
   const [selectedRow, setSelectedRow] = useState<CSVRow | null>(null);
   const [columns, setColumns] = useState<string[]>([]);
   const [error, setError] = useState<string>("");
@@ -70,6 +79,15 @@ export default function Home() {
   const handleUrlColumnChange = (e: ChangeEvent<HTMLInputElement>): void => {
     setUrlColumn(e.target.value);
     setValidationErrors((prev) => ({ ...prev, urlColumn: undefined }));
+  };
+
+  const handleMediaTypeChange = (value: string): void => {
+    if (value === "null") {
+      setMediaType(null);
+    } else {
+      setMediaType(value as mediaTypeValues);
+    }
+    setValidationErrors((prev) => ({ ...prev, mediaType: undefined }));
   };
 
   const processCSV = (): void => {
@@ -236,6 +254,25 @@ export default function Home() {
               )}
             </div>
 
+            <div>
+              <Label htmlFor="media-type-column">Media Type</Label>
+              <Select defaultValue="null" onValueChange={handleMediaTypeChange}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="null" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="null">null</SelectItem>
+                  <SelectItem value="image">Image</SelectItem>
+                  <SelectItem value="video">Video</SelectItem>
+                </SelectContent>
+              </Select>
+              {validationErrors.mediaType && (
+                <p className="text-red-500 text-sm mt-1">
+                  {validationErrors.mediaType}
+                </p>
+              )}
+            </div>
+
             {error && <div className="text-red-500 text-sm">{error}</div>}
 
             <Button
@@ -313,7 +350,10 @@ export default function Home() {
                 {/* Media Preview */}
                 <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden flex flex-col items-center w-full relative">
                   {selectedRow[urlColumn] ? (
-                    <MediaViewer mediaUrl={String(selectedRow[urlColumn])} />
+                    <MediaViewer
+                      mediaUrl={String(selectedRow[urlColumn])}
+                      providedMediaType={mediaType}
+                    />
                   ) : (
                     <Image
                       src="./no-image.svg"
